@@ -3,6 +3,8 @@ title: "Big Year Using eBird Data"
 author: "Julie Mallon"
 date: "5/20/2020"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -21,4 +23,151 @@ We will do this by:
 The algorithm will then sequentially fill in missing species inversely related to their frequency. Let's see how quickly we can achieve *the* Big Year!
 
 
+First we will do this with a single US state - Delaware.
 
+
+```{r, eval = F, echo = T}
+install.packages('rebird')
+
+library(rebird)
+library(readr)    
+library(dplyr)  
+
+source('myfilepath/ebird_targets_functions.R') 
+remotes::install_github("CornellLabofOrnithology/auk")
+
+api_key = 'myapikey'
+```
+
+
+Get current taxonomic list for North and Middle America
+```{r}
+library (RCurl)
+
+AOS_taxonomy_csv <- getURL("http://checklist.americanornithology.org/taxa.csv?type=charset%3Dutf-8%3Bsubspecies%3Dno%3B")
+AOS_taxa <- read.csv (text = AOS_taxonomy_csv)
+```
+
+```{r, eval = T}
+wd <- 'C:/Users/Julie/GitHub/BigYear'
+#library(readr)    
+#library(dplyr)  
+
+library(rebird)
+
+source(file.path(wd,'BigYear_functions.R')) 
+#remotes::install_github("CornellLabofOrnithology/auk")
+
+api_key = 'vir66vo33jre'
+```
+
+Get the eBird taxonomy list
+```{r}
+ebird_taxa <- ebirdtaxonomy(key = api_key) #default language is English
+
+```
+
+Subset this to birds that are known to reside at least part of the year in the USA
+```{r}
+
+```
+
+Get frequencies of birds in Delaware
+```{r}
+DE_freq <- ebirdfreq("states", 
+                         "US-DE", 
+                         startyear = 2019, 
+                         endyear = 2019, 
+                         startmonth = 1, 
+                         endmonth = 12, 
+                         long = TRUE)
+head(DE_freq)
+```
+
+Notice that there are many species with 0's for frequencies. Let's remove those.
+```{r}
+DE_observed <- DE_freq[which(DE_freq$frequency>0),]
+
+DE_ebird_species <- unique(DE_observed$comName)
+```
+
+Now we have a working list of all the species that were seen in Delaware in 2019. Note that eBird taxonomy includes groups of birds (if unidentifiable to species), pairs of birds (that are difficult to ID to species) and hybirds! We want to remove those.
+```{r}
+tail(DE_ebird_species)
+
+nonspecies_remove <- c(grep("sp.", DE_ebird_species),
+                       grep("/", DE_ebird_species),
+                       grep("(hybrid)", DE_ebird_species))
+
+DE_species_2019 <- DE_ebird_species[-nonspecies_remove]
+length(DE_species_2019)
+```
+`r length(DE_species_2019)` is a lot of species for one of the smallest states in the US!
+
+Filter the frequency data to include only the species in our DE_species_2019 vector
+```{r}
+DE_observed <- DE_observed[which(DE_observed$comName %in% DE_species_2019),]
+
+```
+
+```{r, eval = F}
+# on rebird
+ebirdhistorical(loc = 'US-VA-003', date='2019-02-14',max=10)
+
+# non rebird functions
+https://api.ebird.org/v2/product/stats/{{regionCode}}/{{y}}/{{m}}/{{d}}
+#Get a summary of the number of checklist submitted, species seen and contributors on a given date for a country or region.
+
+#regionCode	The country, subnational1, subnational2 or location code.
+#year	The year, from 1800 to the present.
+#month	The month, from 1 -12.
+#day	The day in the month.
+
+https://api.ebird.org/v2/product/lists/{{regionCode}}/{{y}}/{{m}}/{{d}}
+#Get information on the checklists submitted on a given date for a country or region.
+
+#regionCode	The country, subnational1, subnational2 or location code.
+#year	The year, from 1800 to the present.
+#month	The month, from 1 -12.
+#day	The day in the month.
+```
+
+```{r, eval = F}
+
+# Base URL for eBird API 2.0
+url_base_obs = 'https://ebird.org/ws2.0/data/obs/'
+
+# Create a list to hold the individual dictionaries of observations
+observations = NULL
+
+# Loop over the locations of interest and dates of interest
+for(loc_id in loc_ids){
+  for(d in rng):
+  time.sleep(0.5) # time delay
+}
+ymd = '{}/{}/{}'.format(d.year, d.month, d.day)
+
+# Build the URL
+url_obs = url_base_obs + loc_id + '/historic/' + ymd + \
+'?rank=mrec&detail=full&cat=species&key=' + api_key
+print(url_obs)
+
+# Get the observations for one location and date
+obs = requests.get(url_obs)
+
+# Append the new observations to the master list
+observations.extend(obs.json())
+
+# Convert the list of dictionaries to a pandas dataframe        
+obs_df = pd.DataFrame(observations)
+
+# Check out the structure of the dataframe
+print(obs_df.info())
+
+# Check out the first few rows
+obs_df.head()
+
+# Export the dataframe to a csv file
+obs_df.to_csv("observations.csv", index=False)
+
+```
